@@ -1,0 +1,6 @@
+asyncqt==0.8.0
+puremagic==1.28
+python-osc==1.9.0
+pyzmq==26.2.0
+qasync==0.27.1
+watchdog==5.0.3
