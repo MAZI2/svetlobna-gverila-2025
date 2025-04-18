@@ -42,7 +42,7 @@ export function glitch_frame(frame) {
   const distortion = Math.pow(raw_distort, 2.5);         // for glitch activation
   const healing = Math.pow(1 - raw_distort, 2.5);        // for repair probability
 
-  const block_size = 8;
+  const block_size = 0.1;
 
   mv.forEach((vec, row, col) => {
     if (!vec) return;
@@ -63,18 +63,18 @@ export function glitch_frame(frame) {
     if (Math.random() < distortion * 0.5) {
       const max_jump = 4 + raw_distort * 8;
       if (mode === "x") {
-        xshift += (Math.random() - 0.5) * max_jump;
+        xshift += (Math.random() + 0.5) * max_jump;
       } else {
-        yshift += (Math.random() - 0.5) * max_jump;
+        yshift += (Math.random() - 0.5) * max_jump * 0.1;
       }
     }
 
     // Apply capped shift
-    vec[0] += Math.max(-10, Math.min(10, xshift));
+    vec[0] += Math.max(-2, Math.min(5, xshift));
     vec[1] += Math.max(-10, Math.min(10, yshift));
 
     // Rare burst noise
-    if (Math.random() < distortion * 0.05) {
+    if (Math.random() < distortion * 0.2) {
       if (mode === "x") {
         vec[0] += (Math.random() - 0.5) * 10;
       } else {
