@@ -4,65 +4,51 @@ import * as zmq from "zmq";
 const CANDIDATE_MB_TYPE_INTRA = (1 << 0);
 const CANDIDATE_MB_TYPE_INTER = (1 << 1);
 
-class Command {
-  constructor() {
-  }
-
-  run(mb_types, nb_frames) {
-    if (!nb_frames)
-      return;
-
-    const mb_height = mb_types.length;
-    const mb_width = mb_types[0].length;
-
-    for (let mb_y = 0; mb_y < mb_height; mb_y++)
-      for (let mb_x = 0; mb_x < mb_width; mb_x++)
-        mb_types[mb_y][mb_x] = CANDIDATE_MB_TYPE_INTRA;
-  }
-}
-
-let frame_num = 0;
-export function setup(args) {
-  command = new Command();
-  frame_num = 0;
-}
-
 let zmqctx = new zmq.Context();
+let zmqoscsocket = zmqctx.socket(zmq.SUB);
+zmqoscsocket.setsockopt(zmq.SUBSCRIBE, "");
+zmqoscsocket.connect("tcp://localhost:5557");
 
-let zmqoscsocket = zmqctx.socket(zmq.SUB)
-zmqoscsocket.setsockopt(zmq.SUBSCRIBE, "")
-zmqoscsocket.connect("tcp://localhost:5557")
+let osc = { distort: 0.0 };
 
-let zmqsocket = zmqctx.socket(zmq.REQ);
-zmqsocket.connect("tcp://localhost:5556");
-zmqsocket.send("PING clean")
-
-let command;
-let globals = {};
-let osc = {};
-
-let nb_frames = null;
-let setup_clean = () => { return 0 };
-let clean_live = () => { return null };
-let clean_live_working = () => clean_live;
-
-let setup_live = () => { return 0 };
-let glitch_live = () => { return 0 };
-
-let clean_from_osc = false;
 function handleOSC(message) {
-  let parts = message.split(",")
-  if (parts[0] == "/set") {
-    let varname = parts[1];
-    osc[varname] = parseFloat(parts[2]);
-  } else if (parts[0] == "/clean") {
-    clean_from_osc = true;
+  const parts = message.split(",");
+  if (parts[0] === "/set") {
+    osc[parts[1]] = parseFloat(parts[2]);
   }
 }
+
+export function setup(args) {}
+
 export function mb_type_func(args) {
-  //print("called")
-  command.run(args.mb_types)
+  try {
+    let msg = zmqoscsocket.recv_str(zmq.DONTWAIT);
+    while (msg) {
+      handleOSC(msg);
+      msg = zmqoscsocket.recv_str(zmq.DONTWAIT);
+    }
+  } catch (e) {}
+
+  const distort = osc.distort ?? 0.0;
+  const clean_chance = Math.pow(1 - distort, 2.5); // Higher chance to clean when distortion is low
+
+  const mb_types = args.mb_types;
+  const mb_height = mb_types.length;
+  const mb_width = mb_types[0].length;
+
+  for (let y = 0; y < mb_height; y++) {
+    for (let x = 0; x < mb_width; x++) {
+      if (Math.random() < clean_chance * 0.3) {
+        // Clean this block
+        mb_types[y][x] = CANDIDATE_MB_TYPE_INTRA;
+      } else {
+        // Leave this block as-is or distorted
+        mb_types[y][x] = CANDIDATE_MB_TYPE_INTER;
+      }
+    }
+  }
 }
+
 
 
 /*
