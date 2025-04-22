@@ -17,5 +17,4 @@ systemctl stop getty@tty3.service
 # --- Launch the Python script with real GPIO potentiometer input ---
 FILE="${1:-testvideo.mp4}"
 
-( sleep 0.1; ffmpeg -i "$FILE" -vn -f wav - ) | aplay -D default &
 ./bin/ffgac -stream_loop -1 -i "$FILE" -vcodec mpeg4 -mpv_flags +nopimb+forcemv   -qscale:v 1 -fcode 5 -g max -sc_threshold max   -mb_type_script ./scripts/mb_type_func_live_simple.js   -f m4v pipe: | ./bin/fflive -i -f m4v pipe: -s ./scripts/live_from_gpio.js

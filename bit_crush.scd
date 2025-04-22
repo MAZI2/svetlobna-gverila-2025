@@ -6,29 +6,32 @@ s.options.numInputBusChannels = 2;
 s.options.numOutputBusChannels = 2;
 
 s.waitForBoot({
-    // Define and play live input processing
     Ndef(\liveDecimate, {
         var input = SoundIn.ar([0, 1]);
 
-        // Apply decimator to input
+        var bitDepth = \bitDepth.kr(12).max(1);
+        var sampleRate = \sampleRate.kr(44100).max(1);
+
         Decimator.ar(
             in: input,
-            rate: \sampleRate.kr(44100).max(1),
-            bits: \bitDepth.kr(12).max(1)
+            rate: sampleRate,
+            bits: bitDepth
         )
     }).play;
 
-    // OSC handler for sample rate
-    OSCdef(\setSampleRate, { |msg|
-        "OSC Received: %".format(msg).postln;
-        Ndef(\liveDecimate).set(\sampleRate, msg[1].clip(100, 44100));
-    }, '/set/sampleRate');
+    OSCdef(\setDistort, { |msg|
+        var distort, shaped, bits, rate;
 
-    // OSC handler for bit depth
-    OSCdef(\setBitDepth, { |msg|
-        "OSC Received: %".format(msg).postln;
-        Ndef(\liveDecimate).set(\bitDepth, msg[1].clip(5, 24).round(1));
-    }, '/set/bitDepth');
+	distort = msg[1].clip(0.0, 1.0);
+	shaped = pow(distort, 0.8);  // steeper ramp-up
+
+	bits = (5 + (12 * (1.0 - shaped))).round(1);
+	rate = (10000 + (34100 * (1.0 - shaped))).round;
+	
+	Ndef(\liveDecimate).set(\bitDepth, bits, \sampleRate, rate);
+	("🎛️ Distort %.2f → shaped: %.2f → bits: %, rate: %"
+	    .format(distort, shaped, bits, rate)).postln;
+    }, '/set/distort');
 });
 )
 

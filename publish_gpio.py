@@ -3,6 +3,9 @@ import time
 import serial
 import math
 import random
+from pythonosc.udp_client import SimpleUDPClient
+
+osc = SimpleUDPClient("127.0.0.1", 57120)  # IP and port for SuperCollider
 
 # Serial for Arduino or analog bridge
 ser = serial.Serial('/dev/ttyACM0', 9600)
@@ -68,9 +71,15 @@ while True:
             print(scaled)
             distort = min(pow(scaled, 1.5), 1.0)
 
-        print(f"x1: {int(x1)} x2: {int(x2)}  → distort: {distort:.2f}")
         pub.send_string(f"/set,distort,{distort:.2f}")
+        distort_audio = min((scaled ** 0.9) * 1.2, 1.0) if dist >= tolerance else 0.0
 
+        # Optionally print both
+        print(f"x1: {int(x1)} x2: {int(x2)} → video: {distort:.2f} | audio: {distort_audio:.2f}")
+
+        # Send to SuperCollider
+        osc.send_message("/set/distort", distort_audio)
+        
     except Exception as e:
         print("Error:", e)
 
