@@ -1,85 +1,71 @@
-import zmq
 import time
-import serial
 import math
 import random
+import zmq
 from pythonosc.udp_client import SimpleUDPClient
 
-osc = SimpleUDPClient("127.0.0.1", 57120)  # IP and port for SuperCollider
+import board
+import busio
+import adafruit_ads1x15.ads1115 as ADS1115
+from adafruit_ads1x15.analog_in import AnalogIn
 
-# Serial for Arduino or analog bridge
-ser = serial.Serial('/dev/ttyACM0', 9600)
+i2c = busio.I2C(board.SCL, board.SDA)
 
+ads = ADS1115.ADS1115(i2c)
+chan0 = AnalogIn(ads, 0)  # Channel 0
+chan1 = AnalogIn(ads, 1)  # Channel 1
+
+osc = SimpleUDPClient("127.0.0.1", 57120)
 ctx = zmq.Context()
 pub = ctx.socket(zmq.PUB)
 pub.bind("tcp://*:5557")
 
-# Value range from your ADC
-low1 = 300.0
-high1 = 800.0
+low1 = 0.0   # volts
+high1 = 3.3  # volts
+low2 = 0.8
+high2 = 2.9
 
-low2 = 400.0
-high2 = 700.0
-
-# Initialize target values and timing
-target_x1 = 500
-target_x2 = 500
+target_x1 = 1.5
+target_x2 = 1.5
 last_target_time = time.time()
-target_interval = 60.0  # seconds
+target_interval = 60.0
 
-def normalize(x1, x2):
-    return (max(0.0, min(1.0, (x1 - low1) / (high1 - low1))), max(0.0, min(1.0, (x2 - low2) / (high2 - low2))))
+def normalize(v, low, high):
+    return max(0.0, min(1.0, (v - low) / (high - low)))
 
 while True:
     try:
-        # Expect two values from serial like: "543,812"
-        line = ser.readline().decode().strip()
-        parts = line.split(",")
-        if len(parts) != 2:
-            continue
+        x1 = chan0.voltage
+        x2 = chan1.voltage
 
-        x1 = float(parts[0])
-        x2 = float(parts[1])
+        norm_x1 = normalize(x1, low1, high1)
+        norm_x2 = normalize(x2, low2, high2)
 
-        norm_x1, norm_x2 = normalize(x1, x2)
-
-        # Update target every 10 seconds
         now = time.time()
         if now - last_target_time > target_interval:
             target_x1 = random.uniform(low1, high1)
             target_x2 = random.uniform(low2, high2)
             last_target_time = now
-            print(f"🎯 New targets -> x1: {int(target_x1)}, x2: {int(target_x2)}")
+            print(f"🎯 New targets -> x1: {target_x1:.2f}, x2: {target_x2:.2f}")
 
-        # Normalize targets too
-        norm_target_x1, norm_target_x2 = normalize(target_x1, target_x2)
+        norm_target_x1 = normalize(target_x1, low1, high1)
+        norm_target_x2 = normalize(target_x2, low2, high2)
 
-        # Compute Euclidean distance between (x1, x2) and (target_x1, target_x2)
+        dist = math.sqrt((norm_x1 - norm_target_x1) ** 2 + (norm_x2 - norm_target_x2) ** 2)
+        tolerance = 0.1
 
-        tolerance = 0.1  # wide zone around target = no distortion
-
-        # Raw distance
-        dist = math.sqrt((norm_x1 - norm_target_x1)**2 + (norm_x2 - norm_target_x2)**2)
-
-        # Apply non-linear mapping with a dead zone
         if dist < tolerance:
             distort = 0.0
         else:
-            # Steep penalty outside tolerance zone
-            scaled = (dist - tolerance) / (1.0 - tolerance)  # scale to 0–1
-            
-            print(scaled)
+            scaled = (dist - tolerance) / (1.0 - tolerance)
             distort = min(pow(scaled, 1.5), 1.0)
 
         pub.send_string(f"/set,distort,{distort:.2f}")
         distort_audio = min((scaled ** 0.9) * 1.2, 1.0) if dist >= tolerance else 0.0
 
-        # Optionally print both
-        print(f"x1: {int(x1)} x2: {int(x2)} → video: {distort:.2f} | audio: {distort_audio:.2f}")
-
-        # Send to SuperCollider
+        print(f"x1: {x1:.2f} x2: {x2:.2f} → video: {distort:.2f} | audio: {distort_audio:.2f}")
         osc.send_message("/set/distort", distort_audio)
-        
+
     except Exception as e:
         print("Error:", e)
 
