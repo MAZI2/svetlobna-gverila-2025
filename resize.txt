@@ -1,0 +1,1 @@
+ffmpeg -i fireworks2.mp4 -vf scale=1024:576 -c:v libx264 -crf 23 -preset veryfast -an video_1024.mp4

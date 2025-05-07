@@ -20,10 +20,10 @@ ctx = zmq.Context()
 pub = ctx.socket(zmq.PUB)
 pub.bind("tcp://*:5557")
 
-low1 = 0.0   # volts
-high1 = 3.3  # volts
-low2 = 0.8
-high2 = 2.9
+low1 = 1.0   # volts
+high1 = 2.9  # volts
+low2 = 0.1
+high2 = 0.7
 
 target_x1 = 1.5
 target_x2 = 1.5
