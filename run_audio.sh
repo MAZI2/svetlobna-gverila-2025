@@ -22,9 +22,11 @@ SCLANG_PID=$!
 echo "Waiting for SuperCollider to initialize..."
 sleep 5
 
+FILE="${1:-audio_only.mp4}"
+
 # --- Step 4: Start ffmpeg -> aplay pipeline ---
 echo "Starting audio pipeline (ffmpeg -> aplay)..."
-ffmpeg -i /home/dietpi/ffglitch-livecoding/audio_only.wav \
+ffmpeg -i "$FILE" \
     -f s16le -ac 1 -ar 44100 \
     -af "aresample=44100,pan=mono|c0=FL" - \
     | aplay -f S16_LE -r 44100 -c 1 -D loop_out

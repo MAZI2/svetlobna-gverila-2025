@@ -22,8 +22,8 @@ pub.bind("tcp://*:5557")
 
 low1 = 1.0   # volts
 high1 = 2.9  # volts
-low2 = 0.1
-high2 = 0.7
+low2 = 0.15
+high2 = 0.5
 
 target_x1 = 1.5
 target_x2 = 1.5
@@ -65,6 +65,11 @@ while True:
 
         print(f"x1: {x1:.2f} x2: {x2:.2f} → video: {distort:.2f} | audio: {distort_audio:.2f}")
         osc.send_message("/set/distort", distort_audio)
+
+        # LED glitch = stronger flicker
+        led_glitch = min((scaled ** 1.2), 1.0) if dist >= tolerance else 0.0
+        pub.send_string(f"/set,ledglitch,{led_glitch:.2f}")
+
 
     except Exception as e:
         print("Error:", e)

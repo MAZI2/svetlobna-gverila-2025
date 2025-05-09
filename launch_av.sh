@@ -25,7 +25,7 @@ sleep 1
 echo "⏳ Waiting $AUDIO_START_DELAY seconds before launching AUDIO..."
 sleep "$AUDIO_START_DELAY"
 echo "🔊 Launching audio pipeline..."
-bash "$AUDIO_SCRIPT" > /tmp/audio.log 2>&1 &
+bash "$AUDIO_SCRIPT" "$VIDEO_FILE" > /tmp/audio.log 2>&1 &
 AUDIO_PID=$!
 
 # --- Launch VIDEO ---
