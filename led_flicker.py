@@ -55,15 +55,24 @@ try:
             print("ZMQ error:", e)
 
         if glitch_strength < 0.01:
+            color = orange_color(255)
+            for i in range(strip.numPixels()):
+                strip.setPixelColor(i, color)
+            try:
+                strip.show()
+            except Exception as e:
+                print("LED show() error:", e)
             time.sleep(0.2)
             continue
 
+
         # --- Flicker logic ---
         base = int(64 + (glitch_strength * 191))
-        flicker_chance = 0.5 + glitch_strength * 0.5   # up to 1.0
-        off_chance = glitch_strength * 0.2             # more blackouts
-        flash_chance = glitch_strength * 0.05          # occasional flash
+        flicker_chance = 0.5 + glitch_strength * 0.5
+        off_chance = glitch_strength * 0.2
+        flash_chance = glitch_strength * 0.05
 
+        
         # Pick color
         if random.random() < flash_chance:
             color = flash_color()
@@ -84,7 +93,10 @@ try:
             print("LED show() error:", e)
 
         # More aggressive flickering = faster updates
+        #delay = 0.2 - glitch_strength * 0.15
+        #delay = max(0.05, delay)
         delay = max(0.03, 0.1 - glitch_strength * 0.07)
+
         time.sleep(delay)
 
 except KeyboardInterrupt:

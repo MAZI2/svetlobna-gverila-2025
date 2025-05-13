@@ -1,0 +1,23 @@
+[Unit]
+Description=Glitch AV Launch Script
+After=multi-user.target
+Wants=graphical.target
+Conflicts=getty@tty3.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/dietpi/ffglitch-livecoding
+TTYPath=/dev/tty3
+StandardInput=tty
+StandardOutput=tty
+StandardError=tty
+Environment=SDL_VIDEODRIVER=kmsdrm
+Environment=XDG_RUNTIME_DIR=/tmp/runtime-dietpi
+ExecStart=/bin/bash /home/dietpi/ffglitch-livecoding/launch_av.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+

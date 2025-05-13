@@ -43,16 +43,39 @@ while True:
 
         now = time.time()
         if now - last_target_time > target_interval:
-            target_x1 = random.uniform(low1, high1)
-            target_x2 = random.uniform(low2, high2)
-            last_target_time = now
-            print(f"🎯 New targets -> x1: {target_x1:.2f}, x2: {target_x2:.2f}")
+            while True:
+                new_x1 = random.uniform(low1, high1)
+                new_x2 = random.uniform(low2, high2)
 
+                norm_new_x1 = normalize(new_x1, low1, high1)
+                norm_new_x2 = normalize(new_x2, low2, high2)
+
+                norm_old_x1 = normalize(target_x1, low1, high1)
+                norm_old_x2 = normalize(target_x2, low2, high2)
+
+                dist = math.sqrt((norm_new_x1 - norm_old_x1) ** 2 + (norm_new_x2 - norm_old_x2) ** 2)
+
+                if dist >= 0.5:
+                    target_x1, target_x2 = new_x1, new_x2
+                    last_target_time = now
+                    print(f"🎯 New targets -> x1: {target_x1:.2f}, x2: {target_x2:.2f}")
+                    break
+
+        
         norm_target_x1 = normalize(target_x1, low1, high1)
         norm_target_x2 = normalize(target_x2, low2, high2)
 
         dist = math.sqrt((norm_x1 - norm_target_x1) ** 2 + (norm_x2 - norm_target_x2) ** 2)
         tolerance = 0.1
+        led_tolerance = 0.3
+
+        if dist < led_tolerance:
+            led_glitch = 0.0
+        else:
+            scaled = (dist - tolerance) / (1.0 - tolerance)
+            eased = pow(scaled, 2.5)  # makes the start very gentle, ramps up later
+            led_glitch = min(eased * 0.7, 1.0)  # even milder at start
+
 
         if dist < tolerance:
             distort = 0.0
@@ -67,7 +90,7 @@ while True:
         osc.send_message("/set/distort", distort_audio)
 
         # LED glitch = stronger flicker
-        led_glitch = min((scaled ** 1.2), 1.0) if dist >= tolerance else 0.0
+        #led_glitch = min((scaled ** 1.2), 1.0) if dist >= 0.3 else 0.0
         pub.send_string(f"/set,ledglitch,{led_glitch:.2f}")
 
 
