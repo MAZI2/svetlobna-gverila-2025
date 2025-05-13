@@ -2,14 +2,14 @@
 
 # === AUDIO + VIDEO SYNCHRONIZED LAUNCH WITH TUNABLE DELAYS ===
 
-# --- Configurable delays ---
-AUDIO_START_DELAY=0.0   # Seconds to wait before launching audio
-VIDEO_START_DELAY=8.0   # Seconds to wait before launching video
+# --- Get arguments ---
+VIDEO_FILE="${1:-testvideo.mp4}"
+AUDIO_START_DELAY="${2:-0.0}"    # Default: 0.0 seconds
+VIDEO_START_DELAY="${3:-8.0}"    # Default: 8.0 seconds
 
 # --- Paths ---
 AUDIO_SCRIPT="run_audio.sh"
 VIDEO_SCRIPT="run_ffglitch.sh"
-VIDEO_FILE="${1:-testvideo.mp4}"
 
 # --- Cleanup ---
 echo "🧹 Cleaning up old processes..."
@@ -19,7 +19,17 @@ sudo pkill -9 ffmpeg
 sudo pkill -9 aplay
 sudo pkill -9 ffgac
 sudo pkill -9 fflive
+sudo pkill -9 -f publish_gpio.py
+sudo pkill -9 -f led_flicker.py
 sleep 1
+
+# --- Launch GPIO publisher and LED flicker ---
+echo "⚡ Starting GPIO input and LED flicker scripts..."
+/root/venv/bin/python3 /home/dietpi/ffglitch-livecoding/publish_gpio.py > /tmp/gpio.log 2>&1 &
+GPIO_PID=$!
+
+/root/venv/bin/python3 /home/dietpi/ffglitch-livecoding/led_flicker.py > /tmp/led.log 2>&1 &
+LED_PID=$!
 
 # --- Launch AUDIO ---
 echo "⏳ Waiting $AUDIO_START_DELAY seconds before launching AUDIO..."
@@ -35,7 +45,7 @@ echo "🎞️ Launching video pipeline..."
 bash "$VIDEO_SCRIPT" "$VIDEO_FILE" > /tmp/video.log 2>&1 &
 VIDEO_PID=$!
 
-# --- Optional: Wait for both ---
-wait $AUDIO_PID $VIDEO_PID
-echo "✅ Audio and video pipelines exited."
+# --- Optional: Wait for all ---
+wait $GPIO_PID $LED_PID $AUDIO_PID $VIDEO_PID
+echo "✅ All processes exited."
 
