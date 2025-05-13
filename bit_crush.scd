@@ -8,30 +8,38 @@ s.options.numOutputBusChannels = 2;
 s.waitForBoot({
     Ndef(\liveDecimate, {
         var input = SoundIn.ar([0, 1]);
+        var gmin = \gmin.kr(1);  // probability gate lower threshold
+        var offset = \offset.kr(0);  // audio dropout threshold
+        var gmax = 1.0;
 
-        var bitDepth = \bitDepth.kr(12).max(1);
-        var sampleRate = \sampleRate.kr(44100).max(1);
+		// probability modulator
+        var gendy = Gendy1.ar(
+            minfreq: 300, maxfreq: 400,
+            ampdist: 1, durdist: 1,
+            adparam: 1, ddparam: 1.6
+        ).range(gmin, gmax)-offset;
 
-        Decimator.ar(
-            in: input,
-            rate: sampleRate,
-            bits: bitDepth
-        )
+        var trig = CoinGate.ar(gendy, Impulse.ar(s.sampleRate / 2));
+
+        Latch.ar(input, trig)
     }).play;
 
     OSCdef(\setDistort, { |msg|
-        var distort, shaped, bits, rate;
+        var distort = msg[1].clip(0.0, 1.0);
 
-	distort = msg[1].clip(0.0, 1.0);
-	shaped = pow(distort, 0.8);  // steeper ramp-up
+        var gmin = (1.0 - distort);
 
-	bits = (5 + (12 * (1.0 - shaped))).round(1);
-	rate = (10000 + (34100 * (1.0 - shaped))).round;
-	
-	Ndef(\liveDecimate).set(\bitDepth, bits, \sampleRate, rate);
-	("🎛️ Distort %.2f → shaped: %.2f → bits: %, rate: %"
-	    .format(distort, shaped, bits, rate)).postln;
+        // audio dropouts
+        var offset = if(distort > 0.7, {
+            distort.linlin(0.7, 1, 0, 0.6)
+        }, {
+            0.0
+        });
+
+        Ndef(\liveDecimate).set(\gmin, gmin, \offset, offset);
+
+        ("🎛️ Distort: %.2f → gmin: %.2f | offset: %.2f"
+            .format(distort, gmin, offset)).postln;
     }, '/set/distort');
 });
 )
-
