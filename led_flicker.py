@@ -34,11 +34,12 @@ sub.setsockopt_string(zmq.SUBSCRIBE, "/set,ledglitch")
 # === COLOR HELPERS ===
 def orange_color(brightness):
     r = int(min(255, brightness))
-    g = int(min(255, brightness * 0.3))
-    return Color(r, g, 0)
+    g = int(min(255, brightness * 0.5))  # slightly less than red
+    b = int(min(255, brightness * 0.1))   # just a hint of blue
+    return Color(r, g, b)
 
 def flash_color():
-    return Color(255, 120, 0)  # intense orange flash
+    return Color(255, 150, 50)
 
 # === MAIN LOOP ===
 glitch_strength = 0.0
@@ -95,7 +96,7 @@ try:
         # More aggressive flickering = faster updates
         #delay = 0.2 - glitch_strength * 0.15
         #delay = max(0.05, delay)
-        delay = max(0.03, 0.1 - glitch_strength * 0.07)
+        delay = max(0.02, 0.1 - glitch_strength * 0.09)
 
         time.sleep(delay)
 
