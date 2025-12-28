@@ -4,6 +4,8 @@ Run `run_ffglitch.sh` for video distortion via [ffglitch](https://github.com/ram
 
 The amount of distortion is controlled through osc messages. The project is built on the [ffglitch-livecoding](https://github.com/bgola/ffglitch-livecoding) adaptation.
 
+![alt text](https://mpog.dev/content/bad_picture/pic0.PNG)
+
 ffglitch-livecoding
 ===================
 
